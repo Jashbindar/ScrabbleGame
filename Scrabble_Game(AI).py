@@ -1,10 +1,10 @@
 #Scrabble Game
 '''
 Things to do;
-i) rack
+i) rack (done)
 ii) words
 iii) bag (done)
-iv) player
+iv) player (done)
 v) board
 vi) tile (done)
 '''
@@ -69,7 +69,6 @@ class Bag:
             self.bag.append(tile)
     
     def initialize_bag(self):
-        global LETTER_VALUES
         self.addToBag(Tile("A", LETTER_VALUES), 9)
         self.addToBag(Tile("B", LETTER_VALUES), 2)
         self.addToBag(Tile("C", LETTER_VALUES), 2)
@@ -125,6 +124,34 @@ class Rack:
     def rackString(self):
         return ", ".join(tile.getLetter() for tile in self.rack)
     
+    def rackTotal(self):
+        return len(self.rack)
+    
+    def restockRack(self):
+        while self.rackTotal() < 7 and self.bag.remainingTiles() < 0:
+            self.addToRack()
+
+class Player:
+    def __init__(self, bag):
+        self.name = None
+        self.rack = Rack(bag)
+        self.score = 0
+
+    def playerName(self, name):
+        self.name = name
+
+    def getName(self):
+        return self.playerName
+    
+    def getPlayerRack(self):
+        return self.rack.rackString()
+    
+    def scoreIncrement(self, increase):
+        self.score += increase
+
+    def getScore(self):
+        return self.score  
+
 bag = Bag()
 rack = Rack(bag)
 rack.initialize_rack()
