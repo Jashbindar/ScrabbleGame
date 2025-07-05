@@ -128,7 +128,7 @@ class Rack:
         return len(self.rack)
     
     def restockRack(self):
-        while self.rackTotal() < 7 and self.bag.remainingTiles() < 0:
+        while self.rackTotal() < 7 and self.bag.remainingTiles() > 0:
             self.addToRack()
 
 class Player:
@@ -141,7 +141,7 @@ class Player:
         self.name = name
 
     def getName(self):
-        return self.playerName
+        return self.name
     
     def getPlayerRack(self):
         return self.rack.rackString()
@@ -154,6 +154,11 @@ class Player:
 
 bag = Bag()
 rack = Rack(bag)
-rack.initialize_rack()
-output = rack.rackString()
-print(output)
+player = Player(bag)
+player.playerName("John")
+
+player.rack.initialize_rack()
+print(f"Player Name: {player.getName()}")
+print(f"Player Rack: {player.getPlayerRack()}")
+print(f"Player Score: {player.getScore()}")
+print(f"Remaining Tiles in Bag: {bag.remainingTiles()}")
