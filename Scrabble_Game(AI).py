@@ -9,8 +9,8 @@ v) board
 vi) tile (done)
 '''
 
+import heapq
 import random
-import itertools
 
 LETTER_VALUES = {
     'A': 1,
@@ -39,7 +39,7 @@ LETTER_VALUES = {
     'X': 8,
     'Y': 4,
     'Z': 10,
-    ' ': 0
+    '#': 0
 }
 
 class Tile:
@@ -138,6 +138,30 @@ class Rack:
         while self.rackTotal() < 7 and self.bag.remainingTiles() > 0:
             self.addToRack()
 
+class Player:
+    def __init__(self, bag):
+        self.name = None
+        self.rack = Rack(bag)
+        self.score = 0
+
+    def playerName(self, name):
+        self.name = name
+
+    def getName(self):
+        return self.name
+    
+    def getPlayerRack(self):
+        return self.rack.rackString()
+    
+    def rackArr(self):
+        return self.rack
+    
+    def scoreIncrement(self, increase):
+        self.score += increase
+
+    def getScore(self):
+        return self.score
+
 class Board:
     def __init__(self):
         self.board = []
@@ -192,56 +216,155 @@ class Board:
         print("="*50)
 
     def placeWord(self, word, location, direction, player):
-        multiplierSpots = []
+        placed_tiles = []
         direction = direction.upper()
         word = word.upper()
-        row, col = location[0], location[1] + i
+        row, col = location
 
-        if direction.upper() == "RIGHT":
+        if direction == "RIGHT":
             for i in range(len(word)):
-            #check for multipliers
-                if self.board[row][col] in ["TWS", "DWS", "TLS", "DLS"]:
-                    multiplierSpots.append((word[i], self.board[row][col]))
-                    self.board[location[0]][location[1]+i] = " " + word[i] + " "
+                if self.board[row][col + i] in ["TWS", "DWS", "TLS", "DLS"]:
+                    placed_tiles.append((word[i], self.board[row][col + i]))
+                else:
+                    placed_tiles.append((word[i], None))
+                self.board[row][col + i] = " " + word[i] + " "
 
-            if direction.upper() == "DOWN":
-                for i in range(len(word)):
-                    if self.board[row][col] in ["TWS", "DWS", "TLS", "DLS"]:    
-                        multiplierSpots.append((word[i], self.board[row][col]))
-                    self.board[row][col] = " " + word[i] + " "
+        elif direction == "DOWN":
+            for i in range(len(word)):
+                if self.board[row + i][col] in ["TWS", "DWS", "TLS", "DLS"]:
+                    placed_tiles.append((word[i], self.board[row + i][col]))
+                else:
+                    placed_tiles.append((word[i], None))
+                self.board[row + i][col] = " " + word[i] + " "
 
-            return multiplierSpots
+        for letter in word:
+            player.rack.removeTileByLetter(letter)
+        player.rack.restockRack()
+
+        return placed_tiles
+
+    def boardArray(self):
+        return self.board
 
 
-class Player:
-    def __init__(self, bag):
-        self.name = None
-        self.rack = Rack(bag)
-        self.score = 0
 
-    def playerName(self, name):
-        self.name = name
 
-    def getName(self):
-        return self.name
     
-    def getPlayerRack(self):
-        return self.rack.rackString()
-    
-    def scoreIncrement(self, increase):
-        self.score += increase
+class Words:  
+    def __init__(self, word, location, direction, board, player):
+        self.word = word.upper()
+        self.location = location
+        self.direction = direction.upper()
+        self.board = board
+        self.player = player
 
-    def getScore(self):
-        return self.score
+    def calculateScore(self, words):
+        score = 0
+        for letter in words.upper():
+            if letter in LETTER_VALUES:
+                score += LETTER_VALUES[letter]
+        return score
     
+    '''
+    def checkWord(self, direction, location):
+        global roundNumber, players
+
+        if 'roundNumber' not in globals():
+            roundNumber = 1
+        if 'players' not in globals():
+            players = [self.player]
+
+        universalTile = ""
+        currentBoardLetter = ""
+        neededTiles = ""
+
+        if self.word != " ":
+            if "#" in self.word:
+                while universalTile != "":
+                    universalTile = input(print("Please enter a letter into this tile: "))
+                self.word = self.word.replace("#", universalTile.upper(), 1)
+
+            if self.direction == "RIGHT":
+                for i in range(len(self.word)):
+                    if self.board[self.location[0]][self.direction[1] + i][1] == " " or self.board[self.location[0]][self.direction[1] + i] == "TLS" or self.board[self.location[0]][self.direction[1] + i] == "DLS" or self.board[self.location[0]][self.direction[1] + i] == "TWS" or self.board[self.location[0]][self.direction[1] + i] == "DWS" or self.board[self.location[0]][self.direction[1] + i] == "*":
+                        currentBoardLetter += " "
+                    else:
+                        currentBoardLetter += self.board[self.location[0]][self.location[1]+i][1]
+            elif self.direction == "DOWN":
+                for i in range(len(self.word)):
+                    if self.board[self.location[0] + i][self.direction[1]][1] == " " or self.board[self.location[0] + i][self.direction[1]] == "TLS" or self.board[self.location[0] + i][self.direction[1]] == "DLS" or self.board[self.location[0] + i][self.direction[1]] == "TWS" or self.board[self.location[0] + i][self.direction[1]] == "DWS" or self.board[self.location[0] + i][self.direction[1]] == "*":
+                        currentBoardLetter += " "
+                    else:
+                        currentBoardLetter += self.board[self.location[0] + i][self.location[1]][1]
+            else:
+                print("Enter a valid direction.")
+
+            for i in range(len(self.word)):
+                if currentBoardLetter[i] == " ":
+                    neededTiles += self.word[i]
+                elif currentBoardLetter[i] != self.word[i]:
+                    print(f"Current board letter: {currentBoardLetter}, Word: {self.word}, Needed tiles: {neededTiles}")
+                    return print("Make sure that your words do not overlap other words on the board")
+                
+            if currentBoardLetter == " " * len(self.word):
+                print(f"Current board letter: {currentBoardLetter}, Word: {self.word}, Needed tiles: {neededTiles}")
+                return print("Make sure that your words do not overlap other words on the board")
+            
+            if roundNumber == 1 and players[0] == self.player and self.location != (7,7):
+                return print("the first turn must always start that in the middle of the board.\n")
+        else:
+            ans = input(print("Are you sure you want to skip your turn? (Y/N): "))
+            ans == ans.upper()
+
+            if ans == "Y":
+                if roundNumber == 1:
+                    print("Unable to skip please enter a word since its the first round")
+                return True
+            else:
+                return print("Please enter a word")
+    '''
+            
+    def calculateWordScore(placed_tiles):
+        word_multiplier = 1
+        score = 0
+
+        for letter, special in placed_tiles:
+            letter_score = LETTER_VALUES[letter]
+            if special == "TLS":
+                letter_score *= 3
+            elif special == "DLS":
+                letter_score *= 2
+            elif special == "TWS":
+                word_multiplier *= 3
+            elif special == "DWS":
+                word_multiplier *= 2
+            score += letter_score
+
+        return score * word_multiplier
+            
+    def set_word(self, word):
+        self.word = word.upper()
+
+    def set_location(self, location):
+        self.location = location
+
+    def set_direction(self, direction):
+        self.direction = direction
+    
+    def getWord(self):
+        return self.word
+        
+
+
+            
 
 class PlayerBot(Player):
     def __init__(self, bag):
         #calls in parent Player class
         super().__init__(bag)
-        self.dictionary = self.loadDictionary()
-    
-    def loadDictionary(self):
+        self.dictionary = self.loadLocalDictionary()
+
+    def loadLocalDictionary(self):
         basic_words = {
             'CAT', 'BAT', 'RAT', 'HAT', 'SAT', 'MAT', 'PAT', 'FAT',
             'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL',
@@ -263,49 +386,79 @@ class PlayerBot(Player):
         validity = word.upper() in self.dictionary
         return validity
     
+    def calculateScore(self, word):
+        return Words.calculateScore(self, word)
+
     def possibleWords(self):
         rack_letters = []
+        visited = set()
+
         for tile in self.rack.rack:
             rack_letters.append(tile.getLetter())
 
-        possible_Words = []
+        possible_words = []
 
-        max_length = min(8, len(rack_letters) + 1)
+        pq = [(0, "", set(range(len(rack_letters))))]
 
-        for length in range(2, max_length):
-            # generates all of the combination for word within the length
-            for combination in itertools.combinations(rack_letters, length):
-                # tries all of the letter arrangements of the given combination
-                for arrangement in itertools.permutations(combination):
-                    # joins the letters together to create a word
-                    word = ''.join(arrangement)
+        while pq:
+            negScore, current_word, availableLetters = heapq.heappop(pq)
 
-                    if self.wordValidity(word) and word not in possible_Words:
-                        possible_Words.append(word)
+            temp_Word = (current_word, tuple(availableLetters))
+            if temp_Word not in visited:
+                visited.add(temp_Word)
+            
+            if (len(current_word) >= 1 and self.wordValidity(current_word)):
+                if current_word not in possible_words:
+                    possible_words.append(current_word)
 
-        return possible_Words
+            for i in availableLetters:
+                newWord = current_word + rack_letters[i]
+                newAvailableLetter = availableLetters - {i}
+                newScore = self.calculateScore(newWord)
+                heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
 
-
-    def createWord(self, word, player):
+        return possible_words
+        
+    def getBestWord(self):
         rack_letters = []
-        for tile in player.rack.rack:
+        visited = set()
+
+        for tile in self.rack.rack:
             rack_letters.append(tile.getLetter())
 
-        word_letter = list(word.upper())
-        
-        for letter in word_letter:
-            if letter in rack_letters:
-                rack_letters.remove(letter)
-            else:
-                return False
+        best_word = ""
+        best_score = 0
+
+        pq = [(0, "", set(range(len(rack_letters))))]
+
+        while pq:
+            neg_score, current_word, availableLetter = heapq.heappop(pq)
+            current_score = -neg_score
             
-        for letter in word_letter:
-            player.rack.removeTileByLetter(letter)
+            temp_Word = (current_word, tuple(availableLetter))
+            if temp_Word not in visited:
+                visited.add(temp_Word)
 
-        player.rack.restockRack()
+            if (len(current_word) >= 1 and self.wordValidity(current_word)):
+                if current_score > best_score:
+                    best_score = current_score
+                    best_word = current_word
 
-        return True
-            
+            for i in availableLetter:
+                newWord = current_word + rack_letters[i]
+                newAvailableLetter = availableLetter - {i}
+                newScore = self.calculateScore(newWord)
+                heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
+
+        return best_word, best_score
+
+    def exchangeTiles(self):
+        self.bag = Bag
+        for i in range(len(self.rack.rack)):
+            self.rack.removeTileByLetter(i)
+            self.bag.addToBag(7, 7)
+        self.bag.restockRack()
+        return
 
 
         
@@ -315,44 +468,82 @@ class PlayerBot(Player):
 
 
 
-# TEST THE AI
-print("=== TESTING SCRABBLE AI ===\n")
-
-# Create bag and AI player
-bag = Bag()
-ai_player = PlayerBot(bag)
-ai_player.playerName("AI Bot")
-
-# Initialize AI rack
-ai_player.rack.initialize_rack()
-
-# Show AI info
-print(f"AI Player Name: {ai_player.getName()}")
-print(f"AI Rack: {ai_player.getPlayerRack()}")
-print(f"AI Score: {ai_player.getScore()}")
-print(f"Remaining Tiles in Bag: {bag.remainingTiles()}")
-
-# Test AI word finding
-print("\n=== AI WORD FINDING TEST ===")
-print("Finding all possible words from AI's rack...")
-
-possible_words = ai_player.possibleWords()
-
-if possible_words:
-    print(f"AI found {len(possible_words)} possible words:")
-    for i, word in enumerate(possible_words, 1):
-        print(f"{i}. {word}")
-        can_create = ai_player.createWord(word, ai_player)
-        if can_create:
-            print('Can create? -> YES')
-        else:
-            print('Can create? -> NO')
-
-    print(ai_player.rack.rackString())
-else:
-    print("AI couldn't find any words with current rack.")
-    print("This might happen if the rack has very few vowels or common letters.")
-
-if __name__ == "__main__":
+def play_scrabble_game():
+    bag = Bag()
     board = Board()
     board.display_board()
+
+    # Create players
+    human = Player(bag)
+    human.playerName(input("Enter your name: "))
+    human.rack.initialize_rack()
+
+    ai = PlayerBot(bag)
+    ai.playerName("AI Bot")
+    ai.rack.initialize_rack()
+
+    players = [human, ai]
+    current_turn = 0
+
+    # === TEST SECTION: Exchange Tiles ===
+    print("\n=== TESTING PlayerBot.exchangeTiles() ===")
+    print("Before exchange:")
+    print(f"AI Rack: {ai.getPlayerRack()}")
+    ai.exchangeTiles()
+    print("After exchange:")
+    print(f"AI Rack: {ai.getPlayerRack()}")
+    print("========================================\n")
+
+    # === MAIN GAME LOOP ===
+    while bag.remainingTiles() > 0 and human.rack.rackTotal() > 0:
+        current_player = players[current_turn % 2]
+        print(f"\n--- {current_player.getName()}'s Turn ---")
+        board.display_board()
+        print(f"{current_player.getName()} Rack: {current_player.getPlayerRack()}")
+
+        if isinstance(current_player, PlayerBot):
+            word, score = current_player.getBestWord()
+            if not word:
+                print(f"{current_player.getName()} skips turn (no valid words).")
+            else:
+                location = (7, 7) if current_turn == 0 else (random.randint(0, 14), random.randint(0, 14))
+                direction = random.choice(["RIGHT", "DOWN"])
+
+                print(f"{current_player.getName()} plays '{word}' at {location} going {direction}.")
+                placed_tiles = placeWord(board, word, location, direction, current_player)
+                word_score = Words.calculateWordScore(placed_tiles)
+                current_player.scoreIncrement(word_score)
+                print(f"{current_player.getName()} scored {word_score} points.")
+        else:
+            word = input("Enter a word to play (or 'skip'): ").upper()
+            if word == "SKIP":
+                print("Turn skipped.")
+            else:
+                location = tuple(map(int, input("Enter starting position (row col): ").split()))
+                direction = input("Enter direction (RIGHT/DOWN): ").upper()
+
+                try:
+                    placed_tiles = placeWord(board, word, location, direction, current_player)
+                    word_score = Words.calculateWordScore(placed_tiles)
+                    current_player.scoreIncrement(word_score)
+                    print(f"{current_player.getName()} scored {word_score} points.")
+                except Exception as e:
+                    print(f"Invalid move: {e}")
+                    continue  # Let the player retry
+
+        current_turn += 1
+        print(f"Score - {human.getName()}: {human.getScore()} | {ai.getName()}: {ai.getScore()}")
+
+    print("\n=== Game Over ===")
+    board.display_board()
+    print(f"Final Scores - {human.getName()}: {human.getScore()} | {ai.getName()}: {ai.getScore()}")
+    if human.getScore() > ai.getScore():
+        print(f"{human.getName()} wins!")
+    elif human.getScore() < ai.getScore():
+        print(f"{ai.getName()} wins!")
+    else:
+        print("It's a tie!")
+
+
+# Start the game
+play_scrabble_game()
