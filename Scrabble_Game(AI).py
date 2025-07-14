@@ -119,9 +119,6 @@ class Rack:
     def getRack(self):
         return ", ".join(tile.getLetter() for tile in self.rack)
     
-    def rackTotal(self):
-        return len(self.rack)
-    
     def numberOfTiles(self):
         return len(self.rack)
     
@@ -178,9 +175,6 @@ class Player:
     def getName(self):
         return self.name
     
-    def rackArr(self):
-        return self.rack
-    
     def scoreIncrement(self, increase):
         self.score += increase
 
@@ -209,12 +203,6 @@ class Words:
     def wordValidity(self, word):
         validity = word.upper() in self.dictionary
         return validity
-            
-    def set_word(self, word):
-        self.word = word.upper()
-    
-    def getWord(self):
-        return self.word
         
 
 
