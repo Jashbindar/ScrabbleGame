@@ -217,6 +217,7 @@ class PlayerBot(Player):
     def calculateScore(self, word):
         return Words.calculateScore(self, word)
 
+# might remove this method as it has no functions now
     def possibleWords(self):
         rack_letters = []
         visited = set()
@@ -244,7 +245,9 @@ class PlayerBot(Player):
 
             for i in availableLetters:
                 newWord = current_word + rack_letters[i]
-                newAvailableLetter = availableLetters - {i}
+                newAvailableLetter = availableLetters.copy()
+                # Why discard()? -> will not raise a KeyError unlike remove()
+                newAvailableLetter.discard()
                 newScore = self.calculateScore(newWord)
                 heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
 
