@@ -119,6 +119,9 @@ class Rack:
     def getRack(self):
         return ", ".join(tile.getLetter() for tile in self.rack)
     
+    def rackTotal(self):
+        return len(self.rack)
+    
     def numberOfTiles(self):
         return len(self.rack)
     
@@ -203,55 +206,47 @@ class Words:
     def wordValidity(self, word):
         validity = word.upper() in self.dictionary
         return validity
-        
-
-
-            
+      
 
 class PlayerBot(Player):
     def __init__(self, bag):
         #calls in parent Player class
         super().__init__(bag)
-        self.max_limit = 1000
+        self.max_limit = 500
 
-    def calculateScore(self, word):
-        return Words.calculateScore(self, word)
 
-# might remove this method as it has no functions now
-    def possibleWords(self):
-        rack_letters = []
-        visited = set()
+    # def possibleWords(self):
+    #     rack_letters = []
+    #     visited = set()
 
-        for tile in self.rack.rack:
-            rack_letters.append(tile.getLetter())
+    #     for tile in self.rack.rack:
+    #         rack_letters.append(tile.getLetter())
 
-        possible_words = []
-        iterationCount = 0
+    #     possible_words = []
+    #     iterationCount = 0
 
-        pq = [(0, "", set(range(len(rack_letters))))]
+    #     pq = [(0, "", set(range(len(rack_letters))))]
 
-        while pq and iterationCount < self.max_limit:
-            iterationCount += 1
+    #     while pq and iterationCount < self.max_limit:
+    #         iterationCount += 1
 
-            negScore, current_word, availableLetters = heapq.heappop(pq)
+    #         negScore, current_word, availableLetters = heapq.heappop(pq)
 
-            temp_Word = (current_word, tuple(availableLetters))
-            if temp_Word not in visited:
-                visited.add(temp_Word)
+    #         temp_Word = (current_word, tuple(availableLetters))
+    #         if temp_Word not in visited:
+    #             visited.add(temp_Word)
             
-            if (len(current_word) >= 1 and Words(current_word, self).wordValidity(current_word)):
-                if current_word not in possible_words:
-                    possible_words.append(current_word)
+    #         if (len(current_word) >= 1 and Words(current_word, self).wordValidity(current_word)):
+    #             if current_word not in possible_words:
+    #                 possible_words.append(current_word)
 
-            for i in availableLetters:
-                newWord = current_word + rack_letters[i]
-                newAvailableLetter = availableLetters.copy()
-                # Why discard()? -> will not raise a KeyError unlike remove()
-                newAvailableLetter.discard()
-                newScore = self.calculateScore(newWord)
-                heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
+    #         for i in availableLetters:
+    #             newWord = current_word + rack_letters[i]
+    #             newAvailableLetter = availableLetters - {i}
+    #             newScore = self.calculateScore(newWord)
+    #             heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
 
-        return possible_words
+    #     return possible_words
         
     def getBestWord(self):
         rack_letters = []
@@ -282,8 +277,11 @@ class PlayerBot(Player):
 
             for i in availableLetter:
                 newWord = current_word + rack_letters[i]
-                newAvailableLetter = availableLetter - {i}
-                newScore = self.calculateScore(newWord)
+                # Create a new set of available letters without the current letter
+                newAvailableLetter = availableLetter.copy()
+                #why discard()? -> because discard will not raise an error "KeyError" if the element is not found unlike remove()
+                newAvailableLetter.discard(i)
+                newScore = Words(current_word, self).calculateScore(newWord)
                 heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
 
         return best_word, best_score
@@ -316,14 +314,15 @@ def play_game():
                     break
             except ValueError:
                 print("Select the given options!")
-        
-
+    
 
         match choice:
             case 1:
                 print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
                 temp_word = input("\nEnter the word you wish to play: ").upper()
 
+                #will only allow the player to play a word if it is valid and within the rack limit
+                #loop will only run if all the arguments stated are TRUE
                 if all(temp_word.count(letter) <= player.rack.getRack().count(letter) for letter in temp_word):
                     word = Words(temp_word, player)
                     if word.wordValidity(temp_word):
@@ -339,7 +338,7 @@ def play_game():
                     else:
                         print("Invalid word: Enter a word that is in the dictionary")
                 else:
-                    print("Invalid range limit: exceeded the rack limit... SKIPPING TURN!!!")
+                    print("Invalid word: Enter a word that is within your rack limit")
 
             case 2:
                 print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
@@ -348,6 +347,7 @@ def play_game():
                 print(player.rack.getRack())
 
         print(f"\n{bot.getName()} is creating a word...")
+        print(bot.rack.getRack())
         bot_word, bot_score = bot.getBestWord()
         if bot_word:
             for letter in bot_word:
@@ -362,7 +362,7 @@ def play_game():
             else:
                 print("bot didnt exchange")
 
-        print(f"{bot.getName} has created the word {bot_word}")
+        print(f"{bot.getName()} has created the word {bot_word}")
         print(f"{bot.getName()} has created a word with the points of {bot_score}.")
         print("\n=== Final Scores ===")
         print(f"{player.getName()}: {player.getScore()} points")
