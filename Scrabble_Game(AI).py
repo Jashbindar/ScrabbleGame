@@ -213,40 +213,6 @@ class PlayerBot(Player):
         #calls in parent Player class
         super().__init__(bag)
         self.max_limit = 500
-
-
-    # def possibleWords(self):
-    #     rack_letters = []
-    #     visited = set()
-
-    #     for tile in self.rack.rack:
-    #         rack_letters.append(tile.getLetter())
-
-    #     possible_words = []
-    #     iterationCount = 0
-
-    #     pq = [(0, "", set(range(len(rack_letters))))]
-
-    #     while pq and iterationCount < self.max_limit:
-    #         iterationCount += 1
-
-    #         negScore, current_word, availableLetters = heapq.heappop(pq)
-
-    #         temp_Word = (current_word, tuple(availableLetters))
-    #         if temp_Word not in visited:
-    #             visited.add(temp_Word)
-            
-    #         if (len(current_word) >= 1 and Words(current_word, self).wordValidity(current_word)):
-    #             if current_word not in possible_words:
-    #                 possible_words.append(current_word)
-
-    #         for i in availableLetters:
-    #             newWord = current_word + rack_letters[i]
-    #             newAvailableLetter = availableLetters - {i}
-    #             newScore = self.calculateScore(newWord)
-    #             heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
-
-    #     return possible_words
         
     def getBestWord(self):
         rack_letters = []
