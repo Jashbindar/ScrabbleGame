@@ -2,12 +2,16 @@
 '''
 Things to do;
 i) rack (done)
-ii) words
+ii) words (done)
 iii) bag (done)
 iv) player (done)
 v) tile (done)
 
 plan to remove board as it is difficult to allow the bot to analyse the board to place a continuing word
+
+Finalize the code
+-> check the formatting of the code
+-> remove the method of the previous direction taken
 '''
 
 import heapq
