@@ -119,14 +119,11 @@ class Rack:
     def getRack(self):
         return ", ".join(tile.getLetter() for tile in self.rack)
     
-    def rackTotal(self):
-        return len(self.rack)
-    
     def numberOfTiles(self):
         return len(self.rack)
     
     def restockRack(self):
-        while self.rackTotal() < 7 and self.bag.remainingTiles() > 0:
+        while self.numberOfTiles() < 7 and self.bag.remainingTiles() > 0:
             self.addToRack()
 
     def exchangeTiles(self, tile_to_exchange=None):
@@ -136,7 +133,9 @@ class Rack:
 
         tile_to_return = []
 
+        #tile_to_exchange is None because the AI does not pick a specific tile to exchange
         if tile_to_exchange is None:
+
             #logic for AI to exchange tile
             if len(self.rack) > 0:
                 tile_to_remove = random.choice(self.rack)
@@ -155,7 +154,6 @@ class Rack:
                         break
                 if not found:
                     print(f"Tile '{letter}' not found in rack. Cannot exchange.")
-                    return False
 
         for tile in tile_to_return:
             self.bag.bag.append(tile)
@@ -164,7 +162,6 @@ class Rack:
 
         self.restockRack()
         return True
-
 
 class Player:
     def __init__(self, bag):
@@ -185,7 +182,6 @@ class Player:
         return self.score
 
 
-   
 class Words:  
     def __init__(self, word, player):
         self.word = word.upper()
@@ -206,14 +202,14 @@ class Words:
     def wordValidity(self, word):
         validity = word.upper() in self.dictionary
         return validity
-      
+
 
 class PlayerBot(Player):
     def __init__(self, bag):
         #calls in parent Player class
         super().__init__(bag)
-        self.max_limit = 500
-        
+        self.max_iterations = 1000
+
     def getBestWord(self):
         rack_letters = []
         visited = set()
@@ -225,14 +221,15 @@ class PlayerBot(Player):
         best_score = 0
         iterationCount = 0
 
-        pq = [(0, "", set(range(len(rack_letters))))]
+        pq = [(0, "", tuple(range(len(rack_letters))))]
 
-        while pq and iterationCount < self.max_limit:
+        while pq and iterationCount < self.max_iterations:
             iterationCount += 1
             neg_score, current_word, availableLetter = heapq.heappop(pq)
             current_score = -neg_score
             
-            temp_Word = (current_word, tuple(availableLetter))
+            temp_Word = (current_word, availableLetter)
+            
             if temp_Word not in visited:
                 visited.add(temp_Word)
 
@@ -243,14 +240,21 @@ class PlayerBot(Player):
 
             for i in availableLetter:
                 newWord = current_word + rack_letters[i]
-                # Create a new set of available letters without the current letter
-                newAvailableLetter = availableLetter.copy()
-                #why discard()? -> because discard will not raise an error "KeyError" if the element is not found unlike remove()
-                newAvailableLetter.discard(i)
-                newScore = Words(current_word, self).calculateScore(newWord)
-                heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
+                
+                # Create a new tuple of available letters without the current letter
+                newAvailableLetter = tuple(availableLetter)
+                for x in range(len(newAvailableLetter)):
+                    if newAvailableLetter[x] == i:
+                        newAvailableLetter = newAvailableLetter[:x] + newAvailableLetter[x+1:]
+                        break
 
-        return best_word, best_score
+                newState = (newWord, newAvailableLetter)
+                if newState not in visited:
+                    visited.add(newState)
+                    newScore = Words(newWord, self).calculateScore(newWord)
+                    heapq.heappush(pq, (-newScore, newWord, newAvailableLetter))
+
+        return best_word, best_score 
 
 
 
@@ -273,6 +277,7 @@ def play_game():
         print(f"\nRound {i}\n")
         print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
 
+        #error checking for the option selection
         while True:
             try:
                 choice = int(input("\nPlay a Word (1)\nExchange a word (2)\nOption: "))
@@ -287,33 +292,35 @@ def play_game():
                 print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
                 temp_word = input("\nEnter the word you wish to play: ").upper()
 
-                #will only allow the player to play a word if it is valid and within the rack limit
-                #loop will only run if all the arguments stated are TRUE
-                if all(temp_word.count(letter) <= player.rack.getRack().count(letter) for letter in temp_word):
-                    word = Words(temp_word, player)
-                    if word.wordValidity(temp_word):
+                #Check if the word can be formed with the letters in the rack
+                #all() checks if all letters in temp_word are present in the player's rack
+                for letter in temp_word:
+                    if all(temp_word.count(letter) <= player.rack.getRack().count(letter)):
                         word = Words(temp_word, player)
-                        score = word.calculateScore(temp_word)
-                        player.scoreIncrement(score)
-                        
-                        for letter in temp_word:
-                            player.rack.removeTileByLetter(letter)
-                        player.rack.restockRack()
+                        if word.wordValidity(temp_word):
+                            word = Words(temp_word, player)
+                            score = word.calculateScore(temp_word)
+                            player.scoreIncrement(score)
+                            
+                            for letter in temp_word:
+                                player.rack.removeTileByLetter(letter)
+                            player.rack.restockRack()
 
-                        print(f"{player.getName()} has created the word with the score of {score}.")
+                            print(f"{player.getName()} has created the word with the score of {score}.")
+                        else:
+                            print("Invalid word: Enter a word that is in the dictionary")
                     else:
-                        print("Invalid word: Enter a word that is in the dictionary")
-                else:
-                    print("Invalid word: Enter a word that is within your rack limit")
+                        print("Invalid word: Enter a word that is within your rack limit")
 
             case 2:
                 print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
                 tile_to_exchange = str(input("Enter the letter you wish to exchange: "))
                 player.rack.exchangeTiles(tile_to_exchange)
-                print(player.rack.getRack())
+                print(f"Rack after exchanging tiles: {player.rack.getRack()}")
 
         print(f"\n{bot.getName()} is creating a word...")
-        print(bot.rack.getRack())
+        print(f"{bot.getName()}'s Rack: {bot.rack.getRack()}")
+        
         bot_word, bot_score = bot.getBestWord()
         if bot_word:
             for letter in bot_word:
@@ -321,7 +328,6 @@ def play_game():
             bot.rack.restockRack()
             bot.scoreIncrement(bot_score)
         else:
-            bot.rack.exchangeTiles()
             print(f"{bot.getName()} skips their turn (no valid word)")
             if bot.rack.exchangeTiles():
                 print(bot.rack.getRack())
