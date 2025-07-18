@@ -298,23 +298,22 @@ def play_game():
 
                 #Check if the word can be formed with the letters in the rack
                 #all() checks if all letters in temp_word are present in the player's rack
-                for letter in temp_word:
-                    if all(temp_word.count(letter) <= player.rack.getRack().count(letter)):
+                if all(temp_word.count(letter) <= player.rack.getRack().count(letter) for letter in temp_word):
+                    word = Words(temp_word, player)
+                    if word.wordValidity(temp_word):
                         word = Words(temp_word, player)
-                        if word.wordValidity(temp_word):
-                            word = Words(temp_word, player)
-                            score = word.calculateScore(temp_word)
-                            player.scoreIncrement(score)
-                            
-                            for letter in temp_word:
-                                player.rack.removeTileByLetter(letter)
-                            player.rack.restockRack()
+                        score = word.calculateScore(temp_word)
+                        player.scoreIncrement(score)
+                        
+                        for letter in temp_word:
+                            player.rack.removeTileByLetter(letter)
+                        player.rack.restockRack()
 
-                            print(f"{player.getName()} has created the word with the score of {score}.")
-                        else:
-                            print("Invalid word: Enter a word that is in the dictionary")
+                        print(f"{player.getName()} has created the word with the score of {score}.")
                     else:
-                        print("Invalid word: Enter a word that is within your rack limit")
+                        print("Invalid word: Enter a word that is in the dictionary")
+                else:
+                    print("Invalid word: Enter a word that is within your rack limit")
 
             case 2:
                 print(f"{player.getName()}'s Rack: {player.rack.getRack()}")
