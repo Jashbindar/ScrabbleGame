@@ -1,4 +1,3 @@
-#Scrabble Game
 '''
 Things to do;
 i) rack (done)
@@ -44,13 +43,13 @@ LETTER_VALUES = {
     'X': 8,
     'Y': 4,
     'Z': 10,
-    '#': 0
 }
 
 class Tile:
     #initializing the tiles
     def __init__(self, letter, letter_value):
         self.letter = letter.upper()
+        self.value = letter_value
 
     #returns the letter
     def getLetter(self):
@@ -249,6 +248,7 @@ class PlayerBot(Player):
                 newAvailableLetter = tuple(availableLetter)
                 for x in range(len(newAvailableLetter)):
                     if newAvailableLetter[x] == i:
+                        #remove the character at index x from newAvailableLetter by slicing before and after x
                         newAvailableLetter = newAvailableLetter[:x] + newAvailableLetter[x+1:]
                         break
 
